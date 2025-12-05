@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Time Tracker - Cloud Enabled</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, deleteDoc, doc, updateDoc, where } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyD-srRP0mPhzk9SiuUDWsJeYCwm-Z2D33I",
+            authDomain: "timetracker-397cf.firebaseapp.com",
+            projectId: "timetracker-397cf",
+            storageBucket: "timetracker-397cf.firebasestorage.app",
+            messagingSenderId: "356149736276",
+            appId: "1:356149736276:web:2be5a5593886d5e9a10ec1",
+            measurementId: "G-M8H43W3LS6"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        window.firebaseAuth = getAuth(app);
+        window.firebaseDb = getFirestore(app);
+        window.firebaseModules = {
+            createUserWithEmailAndPassword,
+            signInWithEmailAndPassword,
+            signOut,
+            onAuthStateChanged,
+            collection,
+            addDoc,
+            query,
+            orderBy,
+            onSnapshot,
+            deleteDoc,
+            doc,
+            updateDoc,
+            where
+        };
+    </script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Icons
+        const ClockIcon = () => (
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+        );
+
+        const PlayIcon = () => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+        );
+
+        const SquareIcon = () => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            </svg>
+        );
+
+        const Edit2Icon = () => (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+            </svg>
+        );
+
+        const Trash2Icon = () => (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                <line x1="10" y1="11" x2="10" y2="17"></line>
+                <line x1="14" y1="11" x2="14" y2="17"></line>
+            </svg>
+        );
+
+        const MailIcon = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                <polyline points="22,6 12,13 2,6"></polyline>
+            </svg>
+        );
+
+        const CalendarIcon = () => (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+        );
+
+        const LogOutIcon = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+        );
+
+        const BarChartIcon = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="20" x2="12" y2="10"></line>
+                <line x1="18" y1="20" x2="18" y2="4"></line>
+                <line x1="6" y1="20" x2="6" y2="16"></line>
+            </svg>
+        );
+
+        const TrendingUpIcon = () => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                <polyline points="17 6 23 6 23 12"></polyline>
+            </svg>
+        );
+
+        const TrendingDownIcon = () => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline>
+                <polyline points="17 18 23 18 23 12"></polyline>
+            </svg>
+        );
+
+        const AwardIcon = () => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="8" r="7"></circle>
+                <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline>
+            </svg>
+        );
+
+        function AuthForm({ onAuthSuccess }) {
+            const [isLogin, setIsLogin] = useState(true);
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [error, setError] = useState('');
+            const [loading, setLoading] = useState(false);
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setError('');
+                setLoading(true);
+
+                try {
+                    if (isLogin) {
+                        await window.firebaseModules.signInWithEmailAndPassword(
+                            window.firebaseAuth, 
+                            email, 
+                            password
+                        );
+                    } else {
+                        await window.firebaseModules.createUserWithEmailAndPassword(
+                            window.firebaseAuth, 
+                            email, 
+                            password
+                        );
+                    }
+                } catch (err) {
+                    setError(err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-8">
+                    <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
+                        <div className="text-center mb-8">
+                            <div className="flex justify-center mb-4">
+                                <ClockIcon />
+                            </div>
+                            <h1 className="text-3xl font-bold text-gray-800">Time Tracker</h1>
+                            <p className="text-gray-600 mt-2">Cloud-synced time tracking</p>
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Email
+                                </label>
+                                <input
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    required
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Password
+                                </label>
+                                <input
+                                    type="password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    required
+                                    minLength="6"
+                                />
+                            </div>
+
+                            {error && (
+                                <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">
+                                    {error}
+                                </div>
+                            )}
+
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-semibold transition-colors disabled:opacity-50"
+                            >
+                                {loading ? 'Please wait...' : (isLogin ? 'Sign In' : 'Sign Up')}
+                            </button>
+                        </form>
+
+                        <div className="mt-6 text-center">
+                            <button
+                                onClick={() => setIsLogin(!isLogin)}
+                                className="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
+                            >
+                                {isLogin ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function Insights({ entries, onBack }) {
+            const formatDuration = (minutes) => {
+                const hours = Math.floor(minutes / 60);
+                const mins = Math.floor(minutes % 60);
+                const secs = Math.floor((minutes % 1) * 60);
+                
+                if (hours > 0) {
+                    return `${hours}h ${mins}m ${secs}s`;
+                } else if (mins > 0) {
+                    return `${mins}m ${secs}s`;
+                } else {
+                    return `${secs}s`;
+                }
+            };
+
+            const getWeekStart = (date) => {
+                const d = new Date(date);
+                const day = d.getDay();
+                const diff = d.getDate() - day;
+                return new Date(d.setDate(diff));
+            };
+
+            const getPreviousWeekStart = (weekStart) => {
+                const d = new Date(weekStart);
+                d.setDate(d.getDate() - 7);
+                return d;
+            };
+
+            const getCurrentWeekTotal = () => {
+                const now = new Date();
+                const weekStart = getWeekStart(now);
+                
+                return entries
+                    .filter(entry => {
+                        const entryDate = new Date(entry.clockIn);
+                        return entryDate >= weekStart;
+                    })
+                    .reduce((total, entry) => total + entry.duration, 0);
+            };
+
+            const getPreviousWeekTotal = () => {
+                const now = new Date();
+                const weekStart = getWeekStart(now);
+                const prevWeekStart = getPreviousWeekStart(weekStart);
+                
+                return entries
+                    .filter(entry => {
+                        const entryDate = new Date(entry.clockIn);
+                        return entryDate >= prevWeekStart && entryDate < weekStart;
+                    })
+                    .reduce((total, entry) => total + entry.duration, 0);
+            };
+
+            const getLongestSession = () => {
+                if (entries.length === 0) return 0;
+                return Math.max(...entries.map(e => e.duration));
+            };
+
+            const getAverageSession = () => {
+                if (entries.length === 0) return 0;
+                const total = entries.reduce((sum, e) => sum + e.duration, 0);
+                return total / entries.length;
+            };
+
+            const getTotalAllTime = () => {
+                return entries.reduce((total, entry) => total + entry.duration, 0);
+            };
+
+            const getWeeklyChange = () => {
+                const current = getCurrentWeekTotal();
+                const previous = getPreviousWeekTotal();
+                
+                if (previous === 0) return { percent: 0, increased: true };
+                
+                const change = ((current - previous) / previous) * 100;
+                return { 
+                    percent: Math.abs(change).toFixed(1), 
+                    increased: change >= 0 
+                };
+            };
+
+            const getMostProductiveDay = () => {
+                if (entries.length === 0) return 'N/A';
+                
+                const dayTotals = {};
+                entries.forEach(entry => {
+                    const day = new Date(entry.clockIn).toLocaleDateString('en-US', { weekday: 'long' });
+                    dayTotals[day] = (dayTotals[day] || 0) + entry.duration;
+                });
+                
+                let maxDay = '';
+                let maxHours = 0;
+                Object.entries(dayTotals).forEach(([day, hours]) => {
+                    if (hours > maxHours) {
+                        maxHours = hours;
+                        maxDay = day;
+                    }
+                });
+                
+                return maxDay;
+            };
+
+            const getAverageWeeklyHours = () => {
+                if (entries.length === 0) return 0;
+                
+                const firstEntry = new Date(entries[entries.length - 1].clockIn);
+                const now = new Date();
+                const weeksDiff = Math.max(1, Math.ceil((now - firstEntry) / (7 * 24 * 60 * 60 * 1000)));
+                
+                return getTotalAllTime() / weeksDiff;
+            };
+
+            const weeklyChange = getWeeklyChange();
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
+                    <div className="max-w-6xl mx-auto">
+                        <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
+                            <div className="flex items-center justify-between mb-2">
+                                <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
+                                    <BarChartIcon />
+                                    Insights & Analytics
+                                </h1>
+                                <button
+                                    onClick={onBack}
+                                    className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg transition-colors"
+                                >
+                                    ← Back to Tracker
+                                </button>
+                            </div>
+                            <p className="text-gray-600">Your work habits and productivity trends</p>
+                        </div>
+
+                        {entries.length === 0 ? (
+                            <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
+                                <div className="text-gray-400 mb-4">
+                                    <BarChartIcon />
+                                </div>
+                                <h3 className="text-xl font-semibold text-gray-700 mb-2">No Data Yet</h3>
+                                <p className="text-gray-500">Start tracking time to see your insights!</p>
+                            </div>
+                        ) : (
+                            <>
+                                {/* Weekly Trend */}
+                                <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
+                                    <h2 className="text-2xl font-bold text-gray-800 mb-6">Weekly Trend</h2>
+                                    <div className="flex items-center justify-center gap-8">
+                                        <div className="text-center">
+                                            <div className="text-sm text-gray-600 mb-2">Previous Week</div>
+                                            <div className="text-3xl font-bold text-gray-400">
+                                                {formatDuration(getPreviousWeekTotal())}
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center">
+                                            {weeklyChange.increased ? (
+                                                <div className="text-green-500">
+                                                    <TrendingUpIcon />
+                                                </div>
+                                            ) : (
+                                                <div className="text-red-500">
+                                                    <TrendingDownIcon />
+                                                </div>
+                                            )}
+                                            <span className={`text-2xl font-bold ml-2 ${weeklyChange.increased ? 'text-green-500' : 'text-red-500'}`}>
+                                                {weeklyChange.percent}%
+                                            </span>
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="text-sm text-gray-600 mb-2">This Week</div>
+                                            <div className="text-3xl font-bold text-indigo-600">
+                                                {formatDuration(getCurrentWeekTotal())}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="text-center mt-6">
+                                        <div className={`inline-block px-4 py-2 rounded-full text-sm font-semibold ${
+                                            weeklyChange.increased ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                        }`}>
+                                            {weeklyChange.increased ? '📈 Work hours are up!' : '📉 Work hours are down'}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Key Stats Grid */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                                    {/* All-Time Total */}
+                                    <div className="bg-white rounded-2xl shadow-xl p-6">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h3 className="text-lg font-semibold text-gray-700">All-Time Total</h3>
+                                            <AwardIcon />
+                                        </div>
+                                        <div className="text-3xl font-bold text-purple-600">
+                                            {formatDuration(getTotalAllTime())}
+                                        </div>
+                                        <div className="text-sm text-gray-500 mt-2">
+                                            {entries.length} sessions tracked
+                                        </div>
+                                    </div>
+
+                                    {/* Longest Session */}
+                                    <div className="bg-white rounded-2xl shadow-xl p-6">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h3 className="text-lg font-semibold text-gray-700">Longest Session</h3>
+                                            <span className="text-2xl">🏆</span>
+                                        </div>
+                                        <div className="text-3xl font-bold text-orange-600">
+                                            {formatDuration(getLongestSession())}
+                                        </div>
+                                        <div className="text-sm text-gray-500 mt-2">
+                                            Personal record
+                                        </div>
+                                    </div>
+
+                                    {/* Average Session */}
+                                    <div className="bg-white rounded-2xl shadow-xl p-6">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h3 className="text-lg font-semibold text-gray-700">Average Session</h3>
+                                            <span className="text-2xl">⏱️</span>
+                                        </div>
+                                        <div className="text-3xl font-bold text-blue-600">
+                                            {formatDuration(getAverageSession())}
+                                        </div>
+                                        <div className="text-sm text-gray-500 mt-2">
+                                            Per work session
+                                        </div>
+                                    </div>
+
+                                    {/* Most Productive Day */}
+                                    <div className="bg-white rounded-2xl shadow-xl p-6">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h3 className="text-lg font-semibold text-gray-700">Most Productive Day</h3>
+                                            <span className="text-2xl">📅</span>
+                                        </div>
+                                        <div className="text-3xl font-bold text-green-600">
+                                            {getMostProductiveDay()}
+                                        </div>
+                                        <div className="text-sm text-gray-500 mt-2">
+                                            Your best workday
+                                        </div>
+                                    </div>
+
+                                    {/* Average Weekly */}
+                                    <div className="bg-white rounded-2xl shadow-xl p-6">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h3 className="text-lg font-semibold text-gray-700">Weekly Average</h3>
+                                            <span className="text-2xl">📊</span>
+                                        </div>
+                                        <div className="text-3xl font-bold text-indigo-600">
+                                            {formatDuration(getAverageWeeklyHours())}
+                                        </div>
+                                        <div className="text-sm text-gray-500 mt-2">
+                                            Hours per week
+                                        </div>
+                                    </div>
+
+                                    {/* Total Sessions */}
+                                    <div className="bg-white rounded-2xl shadow-xl p-6">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h3 className="text-lg font-semibold text-gray-700">Total Sessions</h3>
+                                            <span className="text-2xl">🎯</span>
+                                        </div>
+                                        <div className="text-3xl font-bold text-pink-600">
+                                            {entries.length}
+                                        </div>
+                                        <div className="text-sm text-gray-500 mt-2">
+                                            Work sessions completed
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Insights Messages */}
+                                <div className="bg-white rounded-2xl shadow-xl p-8">
+                                    <h2 className="text-2xl font-bold text-gray-800 mb-4">Smart Insights</h2>
+                                    <div className="space-y-3">
+                                        {weeklyChange.increased && weeklyChange.percent > 10 && (
+                                            <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded">
+                                                <p className="text-green-800">
+                                                    <strong>Great job!</strong> Your work hours are up {weeklyChange.percent}% this week. Keep up the momentum! 💪
+                                                </p>
+                                            </div>
+                                        )}
+                                        {!weeklyChange.increased && weeklyChange.percent > 10 && (
+                                            <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded">
+                                                <p className="text-yellow-800">
+                                                    <strong>Heads up:</strong> Your work hours are down {weeklyChange.percent}% this week. Consider adjusting your schedule if needed.
+                                                </p>
+                                            </div>
+                                        )}
+                                        {getLongestSession() > 480 && (
+                                            <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+                                                <p className="text-blue-800">
+                                                    <strong>Impressive!</strong> Your longest session was {formatDuration(getLongestSession())}. That's some serious dedication! 🌟
+                                                </p>
+                                            </div>
+                                        )}
+                                        {entries.length >= 50 && (
+                                            <div className="bg-purple-50 border-l-4 border-purple-500 p-4 rounded">
+                                                <p className="text-purple-800">
+                                                    <strong>Milestone reached!</strong> You've tracked {entries.length} work sessions. You're building great habits! 🎉
+                                                </p>
+                                            </div>
+                                        )}
+                                        {getAverageSession() < 120 && entries.length > 10 && (
+                                            <div className="bg-orange-50 border-l-4 border-orange-500 p-4 rounded">
+                                                <p className="text-orange-800">
+                                                    <strong>Tip:</strong> Your average session is under 2 hours. Consider working in longer focused blocks for better productivity.
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        function TimeTracker({ user, onSignOut }) {
+            const [currentTime, setCurrentTime] = useState(new Date());
+            const [isClockedIn, setIsClockedIn] = useState(false);
+            const [clockInTime, setClockInTime] = useState(null);
+            const [entries, setEntries] = useState([]);
+            const [editingEntry, setEditingEntry] = useState(null);
+            const [editForm, setEditForm] = useState({ date: '', startTime: '', endTime: '' });
+            const [currentView, setCurrentView] = useState('tracker'); // 'tracker' or 'insights'
+
+            // Update current time every second
+            useEffect(() => {
+                const timer = setInterval(() => {
+                    setCurrentTime(new Date());
+                }, 1000);
+                return () => clearInterval(timer);
+            }, []);
+
+            // Load entries from Firestore
+            useEffect(() => {
+                if (!user) return;
+
+                const q = window.firebaseModules.query(
+                    window.firebaseModules.collection(window.firebaseDb, 'timeEntries'),
+                    window.firebaseModules.where('userId', '==', user.uid)
+                );
+
+                const unsubscribe = window.firebaseModules.onSnapshot(q, (snapshot) => {
+                    const entriesData = [];
+                    snapshot.forEach((doc) => {
+                        entriesData.push({ id: doc.id, ...doc.data() });
+                    });
+                    // Sort on client side to avoid needing a Firestore index
+                    entriesData.sort((a, b) => new Date(b.clockIn) - new Date(a.clockIn));
+                    setEntries(entriesData);
+                });
+
+                return () => unsubscribe();
+            }, [user]);
+
+            const formatTime = (date) => {
+                return date.toLocaleTimeString('en-US', { 
+                    hour: '2-digit', 
+                    minute: '2-digit', 
+                    second: '2-digit' 
+                });
+            };
+
+            const formatDate = (date) => {
+                return date.toLocaleDateString('en-US', { 
+                    weekday: 'long',
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                });
+            };
+
+            const handleClockIn = () => {
+                setIsClockedIn(true);
+                setClockInTime(new Date());
+            };
+
+            const handleClockOut = async () => {
+                if (!clockInTime) {
+                    console.log('No clock in time found');
+                    return;
+                }
+                
+                const clockOutTime = new Date();
+                const duration = (clockOutTime - clockInTime) / 1000 / 60; // duration in minutes
+                
+                console.log('Attempting to save entry:', {
+                    userId: user.uid,
+                    clockIn: clockInTime.toISOString(),
+                    clockOut: clockOutTime.toISOString(),
+                    duration: duration
+                });
+                
+                try {
+                    const docRef = await window.firebaseModules.addDoc(
+                        window.firebaseModules.collection(window.firebaseDb, 'timeEntries'),
+                        {
+                            userId: user.uid,
+                            clockIn: clockInTime.toISOString(),
+                            clockOut: clockOutTime.toISOString(),
+                            duration: duration,
+                            createdAt: new Date().toISOString()
+                        }
+                    );
+                    
+                    console.log('Entry saved successfully with ID:', docRef.id);
+                    setIsClockedIn(false);
+                    setClockInTime(null);
+                } catch (err) {
+                    console.error('Error saving entry:', err);
+                    console.error('Error code:', err.code);
+                    console.error('Error message:', err.message);
+                    alert('Failed to save entry: ' + err.message + '\n\nPlease check your Firebase security rules.');
+                }
+            };
+
+            const getCurrentSessionDuration = () => {
+                if (!clockInTime) return 0;
+                return (currentTime - clockInTime) / 1000 / 60;
+            };
+
+            const formatDuration = (minutes) => {
+                const hours = Math.floor(minutes / 60);
+                const mins = Math.floor(minutes % 60);
+                const secs = Math.floor((minutes % 1) * 60);
+                
+                if (hours > 0) {
+                    return `${hours}h ${mins}m ${secs}s`;
+                } else if (mins > 0) {
+                    return `${mins}m ${secs}s`;
+                } else {
+                    return `${secs}s`;
+                }
+            };
+
+            const getWeekStart = (date) => {
+                const d = new Date(date);
+                const day = d.getDay();
+                const diff = d.getDate() - day;
+                return new Date(d.setDate(diff));
+            };
+
+            const getWeeklyTotal = () => {
+                const now = new Date();
+                const weekStart = getWeekStart(now);
+                
+                return entries
+                    .filter(entry => {
+                        const entryDate = new Date(entry.clockIn);
+                        return entryDate >= weekStart;
+                    })
+                    .reduce((total, entry) => total + entry.duration, 0);
+            };
+
+            const getTotalHours = () => {
+                return entries.reduce((total, entry) => total + entry.duration, 0);
+            };
+
+            const handleDelete = async (id) => {
+                try {
+                    await window.firebaseModules.deleteDoc(
+                        window.firebaseModules.doc(window.firebaseDb, 'timeEntries', id)
+                    );
+                } catch (err) {
+                    console.error('Error deleting entry:', err);
+                    alert('Failed to delete entry. Please try again.');
+                }
+            };
+
+            const handleEdit = (entry) => {
+                const clockIn = new Date(entry.clockIn);
+                const clockOut = new Date(entry.clockOut);
+                
+                setEditingEntry(entry.id);
+                setEditForm({
+                    date: clockIn.toISOString().split('T')[0],
+                    startTime: clockIn.toTimeString().slice(0, 5),
+                    endTime: clockOut.toTimeString().slice(0, 5)
+                });
+            };
+
+            const handleSaveEdit = async () => {
+                const [year, month, day] = editForm.date.split('-');
+                const [startHour, startMin] = editForm.startTime.split(':');
+                const [endHour, endMin] = editForm.endTime.split(':');
+                
+                const newClockIn = new Date(year, month - 1, day, startHour, startMin);
+                const newClockOut = new Date(year, month - 1, day, endHour, endMin);
+                const newDuration = (newClockOut - newClockIn) / 1000 / 60;
+                
+                try {
+                    await window.firebaseModules.updateDoc(
+                        window.firebaseModules.doc(window.firebaseDb, 'timeEntries', editingEntry),
+                        {
+                            clockIn: newClockIn.toISOString(),
+                            clockOut: newClockOut.toISOString(),
+                            duration: newDuration
+                        }
+                    );
+                    
+                    setEditingEntry(null);
+                } catch (err) {
+                    console.error('Error updating entry:', err);
+                    alert('Failed to update entry. Please try again.');
+                }
+            };
+
+            const handleEmailShare = () => {
+                const weeklyHours = getWeeklyTotal();
+                const totalHours = getTotalHours();
+                
+                let emailBody = `Time Tracking Summary\n\n`;
+                emailBody += `Current Week Total: ${formatDuration(weeklyHours)}\n`;
+                emailBody += `All Time Total: ${formatDuration(totalHours)}\n\n`;
+                emailBody += `Detailed Entries:\n`;
+                emailBody += `-------------------\n`;
+                
+                entries.forEach(entry => {
+                    const clockIn = new Date(entry.clockIn);
+                    const clockOut = new Date(entry.clockOut);
+                    emailBody += `${clockIn.toLocaleDateString()} | ${clockIn.toLocaleTimeString()} - ${clockOut.toLocaleTimeString()} | ${formatDuration(entry.duration)}\n`;
+                });
+                
+                const mailtoLink = `mailto:?subject=Time Tracking Hours&body=${encodeURIComponent(emailBody)}`;
+                window.location.href = mailtoLink;
+            };
+
+            if (currentView === 'insights') {
+                return <Insights entries={entries} onBack={() => setCurrentView('tracker')} />;
+            }
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
+                    <div className="max-w-4xl mx-auto">
+                        {/* Header */}
+                        <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
+                            <div className="flex items-center justify-between mb-6">
+                                <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
+                                    <span className="text-indigo-600"><ClockIcon /></span>
+                                    Time Tracker
+                                </h1>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setCurrentView('insights')}
+                                        className="flex items-center gap-2 bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg transition-colors"
+                                    >
+                                        <BarChartIcon />
+                                        Insights
+                                    </button>
+                                    <button
+                                        onClick={handleEmailShare}
+                                        className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors"
+                                    >
+                                        <MailIcon />
+                                        Email Hours
+                                    </button>
+                                    <button
+                                        onClick={onSignOut}
+                                        className="flex items-center gap-2 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"
+                                    >
+                                        <LogOutIcon />
+                                        Sign Out
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div className="text-sm text-gray-600 mb-6">
+                                Signed in as: {user.email}
+                            </div>
+
+                            {/* Current Time Display */}
+                            <div className="text-center mb-6">
+                                <div className="text-5xl font-bold text-gray-800 mb-2">
+                                    {formatTime(currentTime)}
+                                </div>
+                                <div className="text-lg text-gray-600 flex items-center justify-center gap-2">
+                                    <CalendarIcon />
+                                    {formatDate(currentTime)}
+                                </div>
+                            </div>
+
+                            {/* Clock In/Out Buttons */}
+                            <div className="flex gap-4 justify-center mb-6">
+                                {!isClockedIn ? (
+                                    <button
+                                        onClick={handleClockIn}
+                                        className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-8 py-4 rounded-xl text-xl font-semibold transition-colors shadow-lg"
+                                    >
+                                        <PlayIcon />
+                                        Clock In
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={handleClockOut}
+                                        className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-8 py-4 rounded-xl text-xl font-semibold transition-colors shadow-lg"
+                                    >
+                                        <SquareIcon />
+                                        Clock Out
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Current Session Timer */}
+                            {isClockedIn && (
+                                <div className="bg-green-50 border-2 border-green-500 rounded-xl p-4 text-center">
+                                    <div className="text-sm text-green-700 font-semibold mb-1">CURRENTLY CLOCKED IN</div>
+                                    <div className="text-3xl font-bold text-green-700">
+                                        {formatDuration(getCurrentSessionDuration())}
+                                    </div>
+                                    <div className="text-sm text-green-600 mt-1">
+                                        Started at {clockInTime && formatTime(clockInTime)}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Weekly Summary */}
+                            <div className="grid grid-cols-2 gap-4 mt-6">
+                                <div className="bg-indigo-50 rounded-xl p-4 text-center">
+                                    <div className="text-sm text-indigo-600 font-semibold mb-1">This Week</div>
+                                    <div className="text-2xl font-bold text-indigo-700">
+                                        {formatDuration(getWeeklyTotal())}
+                                    </div>
+                                </div>
+                                <div className="bg-purple-50 rounded-xl p-4 text-center">
+                                    <div className="text-sm text-purple-600 font-semibold mb-1">Total Hours</div>
+                                    <div className="text-2xl font-bold text-purple-700">
+                                        {formatDuration(getTotalHours())}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Entries Log */}
+                        <div className="bg-white rounded-2xl shadow-xl p-8">
+                            <h2 className="text-2xl font-bold text-gray-800 mb-4">Time Entries</h2>
+                            
+                            {entries.length === 0 && !isClockedIn ? (
+                                <div className="text-center text-gray-500 py-8">
+                                    No entries yet. Clock in to start tracking!
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {/* Live Current Session */}
+                                    {isClockedIn && (
+                                        <div className="border-2 border-green-500 rounded-lg p-4 bg-green-50 animate-pulse">
+                                            <div className="flex justify-between items-center">
+                                                <div className="flex-1">
+                                                    <div className="font-semibold text-gray-800 flex items-center gap-2">
+                                                        <span className="inline-block w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
+                                                        {new Date().toLocaleDateString('en-US', { 
+                                                            weekday: 'short',
+                                                            month: 'short', 
+                                                            day: 'numeric',
+                                                            year: 'numeric'
+                                                        })}
+                                                        <span className="text-sm bg-green-500 text-white px-2 py-1 rounded">LIVE</span>
+                                                    </div>
+                                                    <div className="text-sm text-gray-600">
+                                                        Started at {clockInTime && formatTime(clockInTime)} - In progress...
+                                                    </div>
+                                                </div>
+                                                <div className="text-xl font-bold text-green-600">
+                                                    {formatDuration(getCurrentSessionDuration())}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                    
+                                    {/* Saved Entries */}
+                                    {entries.map(entry => (
+                                        <div key={entry.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                                            {editingEntry === entry.id ? (
+                                                <div className="space-y-3">
+                                                    <div className="grid grid-cols-3 gap-3">
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                                                            <input
+                                                                type="date"
+                                                                value={editForm.date}
+                                                                onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+                                                                className="w-full border rounded px-3 py-2"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-1">Clock In</label>
+                                                            <input
+                                                                type="time"
+                                                                value={editForm.startTime}
+                                                                onChange={(e) => setEditForm({ ...editForm, startTime: e.target.value })}
+                                                                className="w-full border rounded px-3 py-2"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-1">Clock Out</label>
+                                                            <input
+                                                                type="time"
+                                                                value={editForm.endTime}
+                                                                onChange={(e) => setEditForm({ ...editForm, endTime: e.target.value })}
+                                                                className="w-full border rounded px-3 py-2"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={handleSaveEdit}
+                                                            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded transition-colors"
+                                                        >
+                                                            Save
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setEditingEntry(null)}
+                                                            className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded transition-colors"
+                                                        >
+                                                            Cancel
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="flex justify-between items-center">
+                                                    <div className="flex-1">
+                                                        <div className="font-semibold text-gray-800">
+                                                            {new Date(entry.clockIn).toLocaleDateString('en-US', { 
+                                                                weekday: 'short',
+                                                                month: 'short', 
+                                                                day: 'numeric',
+                                                                year: 'numeric'
+                                                            })}
+                                                        </div>
+                                                        <div className="text-sm text-gray-600">
+                                                            {new Date(entry.clockIn).toLocaleTimeString('en-US', { 
+                                                                hour: '2-digit', 
+                                                                minute: '2-digit' 
+                                                            })} - {new Date(entry.clockOut).toLocaleTimeString('en-US', { 
+                                                                hour: '2-digit', 
+                                                                minute: '2-digit' 
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="text-xl font-bold text-indigo-600">
+                                                            {formatDuration(entry.duration)}
+                                                        </div>
+                                                        <button
+                                                            onClick={() => handleEdit(entry)}
+                                                            className="text-blue-500 hover:text-blue-700 transition-colors p-2"
+                                                        >
+                                                            <Edit2Icon />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDelete(entry.id)}
+                                                            className="text-red-500 hover:text-red-700 transition-colors p-2"
+                                                        >
+                                                            <Trash2Icon />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function App() {
+            const [user, setUser] = useState(null);
+            const [loading, setLoading] = useState(true);
+
+            useEffect(() => {
+                const unsubscribe = window.firebaseModules.onAuthStateChanged(
+                    window.firebaseAuth,
+                    (currentUser) => {
+                        setUser(currentUser);
+                        setLoading(false);
+                    }
+                );
+
+                return () => unsubscribe();
+            }, []);
+
+            const handleSignOut = async () => {
+                try {
+                    await window.firebaseModules.signOut(window.firebaseAuth);
+                } catch (err) {
+                    console.error('Error signing out:', err);
+                }
+            };
+
+            if (loading) {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+                        <div className="text-2xl text-gray-600">Loading...</div>
+                    </div>
+                );
+            }
+
+            return user ? (
+                <TimeTracker user={user} onSignOut={handleSignOut} />
+            ) : (
+                <AuthForm />
+            );
+        }
+
+        // Wait for Firebase to load
+        const checkFirebase = setInterval(() => {
+            if (window.firebaseAuth && window.firebaseDb && window.firebaseModules) {
+                clearInterval(checkFirebase);
+                const root = ReactDOM.createRoot(document.getElementById('root'));
+                root.render(<App />);
+            }
+        }, 100);
+    </script>
+</body>
+</html>
